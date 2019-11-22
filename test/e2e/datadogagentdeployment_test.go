@@ -111,7 +111,7 @@ func DeploymentDaemonset(t *testing.T) {
 	firstHash := agentdeployment.Status.Agent.CurrentHash
 	// update the DatadogAgentDeployment and check that the status is updated
 	updateImage := func(ad *datadoghqv1alpha1.DatadogAgentDeployment) {
-		updatedImageTag := "6.13.0"
+		updatedImageTag := "6.15.0"
 		ad.Spec.Agent.Image.Name = fmt.Sprintf("datadog/agent:%s", updatedImageTag)
 	}
 	err = utils.UpdateDatadogAgentDeploymentFunc(f, namespace, name, updateImage, retryInterval, timeout)
@@ -133,14 +133,90 @@ func DeploymentDaemonset(t *testing.T) {
 	}
 
 	// check if the Daemonset was updated properly
+	currentHash := ""
 	isDaemonsetUpdated := func(ds *appsv1.DaemonSet) (bool, error) {
-		dsHash := ds.Annotations[datadoghqv1alpha1.MD5AgentDeploymentAnnotationKey]
-		if dsHash != firstHash && dsHash != "" {
+		currentHash = ds.Annotations[datadoghqv1alpha1.MD5AgentDeploymentAnnotationKey]
+		if currentHash != firstHash && currentHash != "" {
 			return true, nil
 		}
 		return false, nil
 	}
 	err = utils.WaitForFuncOnDaemonSet(t, f.Client, namespace, name, isDaemonsetUpdated, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// update the DatadogAgentDeployment to activate APM
+	updateWithAPM := func(ad *datadoghqv1alpha1.DatadogAgentDeployment) {
+		ad.Spec.Agent.Apm.Enabled = datadoghqv1alpha1.NewBoolPointer(true)
+	}
+	err = utils.UpdateDatadogAgentDeploymentFunc(f, namespace, name, updateWithAPM, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	withAPMHash := ""
+	isApmActivatedAndRunning := func(ds *appsv1.DaemonSet) (bool, error) {
+		withAPMHash = ds.Annotations[datadoghqv1alpha1.MD5AgentDeploymentAnnotationKey]
+		if withAPMHash != currentHash && withAPMHash != "" {
+			return true, nil
+		}
+		return false, nil
+	}
+	err = utils.WaitForFuncOnDaemonSet(t, f.Client, namespace, name, isApmActivatedAndRunning, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = utils.WaitForFuncOnDaemonSet(t, f.Client, namespace, name, isDaemonsetOK, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// update the DatadogAgentDeployment to activate Process
+	updateWithProcess := func(ad *datadoghqv1alpha1.DatadogAgentDeployment) {
+		ad.Spec.Agent.Process.Enabled = datadoghqv1alpha1.NewBoolPointer(true)
+	}
+	err = utils.UpdateDatadogAgentDeploymentFunc(f, namespace, name, updateWithProcess, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	withProcessHash := ""
+	isProcessActivatedAndRunning := func(ds *appsv1.DaemonSet) (bool, error) {
+		withProcessHash = ds.Annotations[datadoghqv1alpha1.MD5AgentDeploymentAnnotationKey]
+		if withProcessHash != withAPMHash && withProcessHash != "" {
+			return true, nil
+		}
+		return false, nil
+	}
+	err = utils.WaitForFuncOnDaemonSet(t, f.Client, namespace, name, isProcessActivatedAndRunning, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = utils.WaitForFuncOnDaemonSet(t, f.Client, namespace, name, isDaemonsetOK, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// update the DatadogAgentDeployment to activate SystemProbe
+	updateWithSystemProbe := func(ad *datadoghqv1alpha1.DatadogAgentDeployment) {
+		ad.Spec.Agent.SystemProbe.Enabled = datadoghqv1alpha1.NewBoolPointer(true)
+	}
+	err = utils.UpdateDatadogAgentDeploymentFunc(f, namespace, name, updateWithSystemProbe, retryInterval, timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	withSystemProbeHash := ""
+	isSystemProbeActivatedAndRunning := func(ds *appsv1.DaemonSet) (bool, error) {
+		withSystemProbeHash = ds.Annotations[datadoghqv1alpha1.MD5AgentDeploymentAnnotationKey]
+		if withSystemProbeHash != withProcessHash && withSystemProbeHash != "" {
+			return true, nil
+		}
+		t.Logf("Daemonset pod not ready %#v", ds.Status)
+		return false, nil
+	}
+	err = utils.WaitForFuncOnDaemonSet(t, f.Client, namespace, name, isSystemProbeActivatedAndRunning, retryInterval, timeout)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -66,5 +66,7 @@ test_e2e:
     - MASTER_IP=$(docker network inspect bridge | jq -r '.[].Containers[] | select( .Name | contains("kind-control-plane")).IPv4Address' | cut -d'/' -f1)
     - sed -i "s/127.0.0.1:32001/$MASTER_IP:6443/" $KUBECONFIG
     - kubectl cluster-info
+    - kubectl get nodes
+    - while [[ $(kubectl get node  -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True True True" ]]; do echo "waiting for node" && kubectl get nodes && sleep 1; done
     - GOFLAGS=""
     - make TAG=$TARGET_TAG PREFIX=$DOCKER_REGISTRY/$PROJECTNAME e2e

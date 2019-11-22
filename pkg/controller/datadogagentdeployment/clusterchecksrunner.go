@@ -316,14 +316,6 @@ func getEnvVarsForClusterChecksRunner(logger logr.Logger, dad *datadoghqv1alpha1
 			Name:  datadoghqv1alpha1.DDEnableMetadataCollection,
 			Value: "false",
 		},
-		{
-			Name: datadoghqv1alpha1.DDHostname,
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: FieldPathSpecNodeName,
-				},
-			},
-		},
 	}
 
 	if spec.ClusterChecksRunner.Config.LogLevel != nil {
