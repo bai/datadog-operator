@@ -1,4 +1,5 @@
-image: golang:1.13
+#image: golang:1.13
+image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/datadog-agent-buildimages/deb_x64:v1709713-2adac2a
 variables:
   GO111MODULE: "on"
   PROJECTNAME: "datadog-operator"
@@ -60,6 +61,7 @@ test_e2e:
     - apt-get update && apt-get install -y mercurial jq
     - make install-tools
   script:
+    - DD_API_KEY=$(aws ssm get-parameter --region us-east-1 --name ci.datadog-agent.datadog_api_key --with-decryption --query "Parameter.Value" --out text)
     - docker network inspect bridge
     - export PATH=$PATH:/usr/local/go/bin:$(pwd)/bin
     - export KUBECONFIG="$(kind get kubeconfig-path)"

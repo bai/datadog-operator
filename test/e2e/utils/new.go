@@ -19,6 +19,7 @@ type NewDatadogAgentDeploymentOptions struct {
 	ExtraAnnotations    map[string]string
 	ClusterAgentEnabled bool
 	UseEDS              bool
+	APIKey              string
 }
 
 var (
@@ -63,6 +64,10 @@ func NewDatadogAgentDeployment(ns, name, image string, options *NewDatadogAgentD
 	ad.Spec.Agent.Rbac.Create = datadoghqv1alpha1.NewBoolPointer(true)
 
 	if options != nil {
+		if options.APIKey != "" {
+			ad.Spec.Credentials.APIKey = options.APIKey
+		}
+
 		if options.UseEDS && ad.Spec.Agent != nil {
 			ad.Spec.Agent.UseExtendedDaemonset = &options.UseEDS
 		}

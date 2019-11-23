@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -34,7 +35,13 @@ var (
 	timeout              = time.Second * 120
 	cleanupRetryInterval = time.Second * 1
 	cleanupTimeout       = time.Second * 5
+
+	dd_api_key = ""
 )
+
+func init() {
+	dd_api_key = os.Getenv("DD_API_KEY")
+}
 
 func TestDatadogAgentDeployment(t *testing.T) {
 	datadogagentdeploymentList := &datadoghqv1alpha1.DatadogAgentDeploymentList{}
@@ -57,6 +64,7 @@ func DeploymentDaemonset(t *testing.T) {
 	name := "foo"
 	options := &utils.NewDatadogAgentDeploymentOptions{
 		UseEDS: false,
+		APIKey: dd_api_key,
 	}
 
 	agentdeployment := utils.NewDatadogAgentDeployment(namespace, name, fmt.Sprintf("datadog/agent:%s", "6.14.0"), options)
